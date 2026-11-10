@@ -16,9 +16,12 @@ Random rnd = new Random();
 
 #endregion
 #region Degiskenlerin dizilerin tanimlandigi bolum.
+int b = 0;
+int c = 0;
 int RowDot = 11;
 int ColmunDot = 11;
-float[,] filedValue = new float[RowDot, ColmunDot];
+int holdValue = 0;
+float[,] fieldValue = new float[RowDot, ColmunDot];
 int counter = 0;
 Vector3[,] vectors = new Vector3[RowDot, ColmunDot];
 #endregion
@@ -29,10 +32,32 @@ for (int i = 0; i < RowDot; i++)
     //System.Console.WriteLine(i);
     for (int j = 0; j < ColmunDot; j++)
     {
-        int valueHolder = rnd.Next(0, 20);
+        if (j == 0 && i == 0)
+        {
+            holdValue = rnd.Next(0, 20);
+            fieldValue[i, j] = holdValue;
 
-        filedValue[i, j] = valueHolder;
-        vectors[i, j] = new Vector3(j - 5, filedValue[i, j] - 5, i - 5);
+        }
+        else if (i == 0)
+        {
+
+
+            holdValue = rnd.Next((int)fieldValue[i, j - 1] - 1, (int)fieldValue[i, j - 1] + 2);
+
+
+        }
+        else if (j == 0 && i > 0)
+        {
+            holdValue = rnd.Next((int)fieldValue[i - 1, j] - 1, (int)fieldValue[i - 1, j] + 2);
+        }
+        else
+        {
+            float enAz = Math.Max(fieldValue[i, j - 1] - 1, fieldValue[i - 1, j] - 1);
+            float enFazla = Math.Min(fieldValue[i, j - 1] + 1, fieldValue[i - 1, j] + 1);
+            holdValue = rnd.Next((int)enAz, (int)enFazla + 1);
+        }
+        fieldValue[i, j] = holdValue;
+        vectors[i, j] = new Vector3(j - 5, fieldValue[i, j] - 5, i - 5);
         counter++;
     }
 }
@@ -41,7 +66,7 @@ for (int i = 0; i < RowDot - 1; i++)
     //System.Console.WriteLine(i);
     for (int j = 0; j < ColmunDot - 1; j++)
     {
-        System.Console.WriteLine($"{filedValue[i, j]},{filedValue[i + 1, j]},{filedValue[i, j + 1]},{filedValue[i + 1, j + 1]} -------- {counter}");
+        System.Console.WriteLine($"{fieldValue[i, j]},{fieldValue[i + 1, j]},{fieldValue[i, j + 1]},{fieldValue[i + 1, j + 1]} -------- {counter}");
 
         counter++;
     }
@@ -71,7 +96,7 @@ while (!Raylib.WindowShouldClose())
 
 
             Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.DarkGreen);
-            Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i + 1, j], vectors[i, j + 1], Color.DarkGreen);
+            Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.Green);
             counter++;
         }
     }
