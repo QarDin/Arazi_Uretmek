@@ -1,5 +1,8 @@
-﻿using Raylib_cs;
+﻿
+using Raylib_cs;
+using System.ComponentModel.DataAnnotations;
 using System.Numerics;
+using System.Runtime.Intrinsics.Arm;
 
 Camera3D cam = new Camera3D();
 cam.Position = new Vector3(0.0f, 10.0f, 10.0f);
@@ -16,22 +19,80 @@ Random rnd = new Random();
 
 #endregion
 #region Degiskenlerin dizilerin tanimlandigi bolum.
-int b = 0;
-int c = 0;
 int RowDot = 11;
 int ColmunDot = 11;
 int holdValue = 0;
 float[,] fieldValue = new float[RowDot, ColmunDot];
 int counter = 0;
 Vector3[,] vectors = new Vector3[RowDot, ColmunDot];
+int aralik = 5;
+bool noiseKullan = true; // false = Halka 2 (+-1 kurali)
 #endregion
 //  10x10 arazi 
+#region Hash isleminin yapildigi parca
+static uint hash(uint x)
+{
+    x = (x >> 16) ^ x * 0x45d9f3bu;
+    x = ((x >> 16) ^ x) * 0x45d9f3bu;
+    x = (x >> 16) ^ x;
+    return x;
+}
+static double noise(int c, int aralik)
+{
+    int holder = c / aralik;
+    double oran = (double)(1.0 / aralik);
+    double sonuc = oran * (c % aralik);
+    double donusturucu = sonuc * sonuc * (3 - 2 * sonuc);
+    int a = (int)hash((uint)holder) % 20;
+    int b = (int)hash((uint)(holder + 1)) % 20;
+    double fark = b - a;
+    double adim = fark * donusturucu;
+    return a + adim;
+}
+double noise2D(int i, int j, int aralik)
+{
+    int ni = i / aralik;
+    int nj = j / aralik;
+    int solUst = (int)hash((uint)(ni * 100 + nj)) % 20;
+    int sagUst = (int)hash((uint)(ni * 100 + nj + 1)) % 20;
+    int solAlt = (int)hash((uint)((ni + 1) * 100 + nj)) % 20;
+    int sagAlt = (int)hash((uint)((ni + 1) * 100 + nj + 1)) % 20;
+    double satirKalani = i % aralik;
+    double stunKalani = j % aralik;
+    double satirOrani = satirKalani / (double)aralik;
+    double stunOrani = stunKalani / (double)aralik;
+    double satirS = satirOrani * satirOrani * (3 - 2 * satirOrani);
+    double stunS = stunOrani * stunOrani * (3 - 2 * stunOrani);
+    double fark = sagUst - solUst;
+    double adim = fark * stunS;
+    double ust = solUst + adim;
+    double sagAltAdim = sagAlt - solAlt;
+    double sagAltFark = sagAltAdim * stunS;
+    double alt = solAlt + sagAltFark;
+    double dikeyFark = alt - ust;
+    double dikeyAdim = dikeyFark * satirS;
+    return ust + dikeyAdim;
+
+}
+// for (int k = 0; k < 10; k++)
+// {
+//     var val = hash((uint)k);
+//     //System.Console.WriteLine(val % 20);
+
+// }
+#endregion
 #region araziye degere atayan dongu 
 for (int i = 0; i < RowDot; i++)
 {
     //System.Console.WriteLine(i);
     for (int j = 0; j < ColmunDot; j++)
     {
+        if (noiseKullan)
+        {
+            fieldValue[i, j] = (float)noise2D(i, j, aralik);
+            vectors[i, j] = new Vector3(j - 5, fieldValue[i, j] - 5, i - 5);
+            continue;
+        }
         if (j == 0 && i == 0)
         {
             holdValue = rnd.Next(0, 20);
