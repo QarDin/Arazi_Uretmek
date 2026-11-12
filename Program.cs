@@ -1,8 +1,7 @@
 ﻿
 using Raylib_cs;
-using System.ComponentModel.DataAnnotations;
 using System.Numerics;
-using System.Runtime.Intrinsics.Arm;
+
 
 Camera3D cam = new Camera3D();
 cam.Position = new Vector3(0.0f, 10.0f, 10.0f);
@@ -10,53 +9,48 @@ cam.Target = new Vector3(0.0f, 0.0f, 0.0f);
 cam.Up = new Vector3(0.0f, 1.0f, 0.0f);
 cam.FovY = 45.0f;
 cam.Projection = CameraProjection.Perspective;
-Raylib.SetTargetFPS(60);
-Raylib.InitWindow(800, 600, "Arazi_Denemesi");
+Raylib.SetTargetFPS(0);
+//Raylib.SetConfigFlags(ConfigFlags.FullscreenMode);
+Raylib.InitWindow(1920, 1080, "Arazi_Denemesi");
 Raylib.DisableCursor();
 
-#region Random Sayi ureten yer
+
+
 Random rnd = new Random();
 
-#endregion
-#region Degiskenlerin dizilerin tanimlandigi bolum.
-int RowDot = 11;
-int ColmunDot = 11;
+
+int RowDot = 110;
+int ColmunDot = 110;
 int holdValue = 0;
 float[,] fieldValue = new float[RowDot, ColmunDot];
 int counter = 0;
 Vector3[,] vectors = new Vector3[RowDot, ColmunDot];
 int aralik = 5;
-bool noiseKullan = true; // false = Halka 2 (+-1 kurali)
-#endregion
-//  10x10 arazi 
-#region Hash isleminin yapildigi parca
-static uint hash(uint x)
-{
-    x = (x >> 16) ^ x * 0x45d9f3bu;
-    x = ((x >> 16) ^ x) * 0x45d9f3bu;
-    x = (x >> 16) ^ x;
-    return x;
-}
-static double noise(int c, int aralik)
-{
-    int holder = c / aralik;
-    double oran = (double)(1.0 / aralik);
-    double sonuc = oran * (c % aralik);
-    double donusturucu = sonuc * sonuc * (3 - 2 * sonuc);
-    int a = (int)hash((uint)holder) % 20;
-    int b = (int)hash((uint)(holder + 1)) % 20;
-    double fark = b - a;
-    double adim = fark * donusturucu;
-    return a + adim;
-}
-double noise2D(int i, int j, int aralik)
+int aralikKucuk = 3;
+bool noiseKullan = true;
+
+ushort[] ucgenNumaralari = new ushort[(RowDot - 1) * (ColmunDot - 1) * 6];
+float[] ucgenNoktalari = new float[RowDot * ColmunDot * 3];
+int tabloBoyu = (RowDot - 1) / aralik + 2;
+int[,] kontrol = new int[tabloBoyu, tabloBoyu];
+for (int t = 0; t < tabloBoyu; t++)
+    for (int u = 0; u < tabloBoyu; u++)
+        kontrol[t, u] = rnd.Next(10);
+
+int tabloBoyuKucuk = (RowDot - 1) / aralikKucuk + 2;
+int[,] kontrolKucuk = new int[tabloBoyuKucuk, tabloBoyuKucuk];
+for (int t = 0; t < tabloBoyuKucuk; t++)
+    for (int u = 0; u < tabloBoyuKucuk; u++)
+        kontrolKucuk[t, u] = rnd.Next(2);
+
+double noise2D(int i, int j, int aralik, int[,] tablo)
 {
     int ni = i / aralik;
     int nj = j / aralik;
-    int solUst = (int)hash((uint)(ni * 100 + nj)) % 20;
-    int sagUst = (int)hash((uint)(ni * 100 + nj + 1)) % 20;
-    int solAlt = (int)hash((uint)((ni + 1) * 100 + nj)) % 20;
-    int sagAlt = (int)hash((uint)((ni + 1) * 100 + nj + 1)) % 20;
+    int solUst = tablo[ni, nj];
+    int sagUst = tablo[ni, nj + 1];
+    int solAlt = tablo[ni + 1, nj];
+    int sagAlt = tablo[ni + 1, nj + 1];
     double satirKalani = i % aralik;
     double stunKalani = j % aralik;
     double satirOrani = satirKalani / (double)aralik;
@@ -74,14 +68,7 @@ double noise2D(int i, int j, int aralik)
     return ust + dikeyAdim;
 
 }
-// for (int k = 0; k < 10; k++)
-// {
-//     var val = hash((uint)k);
-//     //System.Console.WriteLine(val % 20);
 
-// }
-#endregion
-#region araziye degere atayan dongu 
 for (int i = 0; i < RowDot; i++)
 {
     //System.Console.WriteLine(i);
@@ -89,13 +76,13 @@ for (int i = 0; i < RowDot; i++)
     {
         if (noiseKullan)
         {
-            fieldValue[i, j] = (float)noise2D(i, j, aralik);
-            vectors[i, j] = new Vector3(j - 5, fieldValue[i, j] - 5, i - 5);
+            fieldValue[i, j] = (float)noise2D(i, j, aralik, kontrol) + (float)noise2D(i, j, aralikKucuk, kontrolKucuk);
+            vectors[i, j] = new Vector3(j - 50, fieldValue[i, j] - 50, i - 50);
             continue;
         }
         if (j == 0 && i == 0)
         {
-            holdValue = rnd.Next(0, 20);
+            holdValue = rnd.Next(0, 10);
             fieldValue[i, j] = holdValue;
 
         }
@@ -122,6 +109,43 @@ for (int i = 0; i < RowDot; i++)
         counter++;
     }
 }
+for (int i = 0; i < RowDot; i++)
+{
+
+    for (int a = 0; a < ColmunDot; a++)
+    {
+
+        ucgenNoktalari[(i * ColmunDot + a) * 3] = vectors[i, a].X;
+        ucgenNoktalari[(i * ColmunDot + a) * 3 + 1] = vectors[i, a].Y;
+        ucgenNoktalari[(i * ColmunDot + a) * 3 + 2] = vectors[i, a].Z;
+
+    }
+}
+int sira = 0;
+for (int j = 0; j < RowDot - 1; j++)
+{
+
+    for (int k = 0; k < ColmunDot - 1; k++)
+    {
+        int solUst = j * ColmunDot + k;
+        int sagUst = j * ColmunDot + k + 1;
+        int solAlt = (j + 1) * ColmunDot + k;
+        int sagAlt = (j + 1) * ColmunDot + k + 1;
+        ucgenNumaralari[sira] = (ushort)solUst;
+        sira++;
+        ucgenNumaralari[sira] = (ushort)solAlt;
+        sira++;
+        ucgenNumaralari[sira] = (ushort)sagUst;
+        sira++;
+        ucgenNumaralari[sira] = (ushort)sagAlt;
+        sira++;
+        ucgenNumaralari[sira] = (ushort)sagUst;
+        sira++;
+        ucgenNumaralari[sira] = (ushort)solAlt;
+        sira++;
+
+    }
+}
 for (int i = 0; i < RowDot - 1; i++)
 {
     //System.Console.WriteLine(i);
@@ -132,11 +156,16 @@ for (int i = 0; i < RowDot - 1; i++)
         counter++;
     }
 }
-#endregion
-#region 
+Mesh arazi = new Mesh();
+arazi.VertexCount = RowDot * ColmunDot;
+arazi.TriangleCount = (RowDot - 1) * (ColmunDot - 1) * 2;
+arazi.AllocVertices();
+arazi.AllocIndices();
+ucgenNoktalari.CopyTo(arazi.VerticesAs<float>());
+ucgenNumaralari.CopyTo(arazi.IndicesAs<ushort>());
+Raylib.UploadMesh(ref arazi, false);
+var loadMaterial = Raylib.LoadMaterialDefault();
 
-#endregion
-#region Cizimlerin gerceklestigi alan.
 while (!Raylib.WindowShouldClose())
 {
     Raylib.UpdateCamera(ref cam, CameraMode.Free);
@@ -147,24 +176,25 @@ while (!Raylib.WindowShouldClose())
 
     Raylib.BeginMode3D(cam);
 
-    Raylib.DrawGrid(10, 1.0f);
-    for (int i = 0; i < RowDot - 1; i++)
-    {
-        //System.Console.WriteLine(i);
-        for (int j = 0; j < ColmunDot - 1; j++)
-        {
-            int valueHolder = rnd.Next(0, 20);
+    Raylib.DrawGrid(100, 1.0f);
+    // for (int i = 0; i < RowDot - 1; i++)
+    // {
+    //     //System.Console.WriteLine(i);
+    //     for (int j = 0; j < ColmunDot - 1; j++)
+    //     {
+    //         int valueHolder = rnd.Next(0, 20);
 
 
-            Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.DarkGreen);
-            Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.Green);
-            counter++;
-        }
-    }
+    //         Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.DarkGreen);
+    //         Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.Green);
+    //         counter++;
+    //     }
+    // }
+    Raylib.DrawMesh(arazi, loadMaterial, Matrix4x4.Identity);
 
     Raylib.EndMode3D();
 
     Raylib.EndDrawing();
+    Raylib.DrawFPS(50, 50);
 }
 Raylib.CloseWindow();
-#endregion
