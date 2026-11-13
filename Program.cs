@@ -1,5 +1,7 @@
 ﻿
 using Raylib_cs;
+using System.ComponentModel;
+using System.Data.Common;
 using System.Numerics;
 
 
@@ -10,7 +12,7 @@ cam.Up = new Vector3(0.0f, 1.0f, 0.0f);
 cam.FovY = 45.0f;
 cam.Projection = CameraProjection.Perspective;
 Raylib.SetTargetFPS(0);
-//Raylib.SetConfigFlags(ConfigFlags.FullscreenMode);
+Raylib.SetConfigFlags(ConfigFlags.FullscreenMode);
 Raylib.InitWindow(1920, 1080, "Arazi_Denemesi");
 Raylib.DisableCursor();
 
@@ -31,6 +33,7 @@ bool noiseKullan = true;
 
 ushort[] ucgenNumaralari = new ushort[(RowDot - 1) * (ColmunDot - 1) * 6];
 float[] ucgenNoktalari = new float[RowDot * ColmunDot * 3];
+
 int tabloBoyu = (RowDot - 1) / aralik + 2;
 int[,] kontrol = new int[tabloBoyu, tabloBoyu];
 for (int t = 0; t < tabloBoyu; t++)
@@ -41,7 +44,7 @@ int tabloBoyuKucuk = (RowDot - 1) / aralikKucuk + 2;
 int[,] kontrolKucuk = new int[tabloBoyuKucuk, tabloBoyuKucuk];
 for (int t = 0; t < tabloBoyuKucuk; t++)
     for (int u = 0; u < tabloBoyuKucuk; u++)
-        kontrolKucuk[t, u] = rnd.Next(2);
+        kontrolKucuk[t, u] = rnd.Next(3);
 
 double noise2D(int i, int j, int aralik, int[,] tablo)
 {
@@ -77,7 +80,7 @@ for (int i = 0; i < RowDot; i++)
         if (noiseKullan)
         {
             fieldValue[i, j] = (float)noise2D(i, j, aralik, kontrol) + (float)noise2D(i, j, aralikKucuk, kontrolKucuk);
-            vectors[i, j] = new Vector3(j - 50, fieldValue[i, j] - 50, i - 50);
+            vectors[i, j] = new Vector3(j - 5, fieldValue[i, j] - 5, i - 5);
             continue;
         }
         if (j == 0 && i == 0)
@@ -156,6 +159,27 @@ for (int i = 0; i < RowDot - 1; i++)
         counter++;
     }
 }
+float enAlcak = 0;
+float enYuksek = 0;
+float control = 0;
+float minValHolder = float.MaxValue;
+float maxValHolder = float.MinValue;
+
+for (int z = 0; z < RowDot; z++)
+{
+    for (int o = 0; o < ColmunDot; o++)
+    {
+        control = vectors[z, o].Y;
+        if (control < minValHolder)
+        {
+            minValHolder = control;
+        }
+        if (control > maxValHolder)
+        {
+            maxValHolder = control;
+        }
+    }
+}
 Mesh arazi = new Mesh();
 arazi.VertexCount = RowDot * ColmunDot;
 arazi.TriangleCount = (RowDot - 1) * (ColmunDot - 1) * 2;
@@ -165,6 +189,11 @@ ucgenNoktalari.CopyTo(arazi.VerticesAs<float>());
 ucgenNumaralari.CopyTo(arazi.IndicesAs<ushort>());
 Raylib.UploadMesh(ref arazi, false);
 var loadMaterial = Raylib.LoadMaterialDefault();
+
+Color[] renkler = { Color.Blue, Color.Green, Color.Brown, Color.Gray, Color.White };
+
+
+
 
 while (!Raylib.WindowShouldClose())
 {
@@ -176,21 +205,53 @@ while (!Raylib.WindowShouldClose())
 
     Raylib.BeginMode3D(cam);
 
-    Raylib.DrawGrid(100, 1.0f);
-    // for (int i = 0; i < RowDot - 1; i++)
-    // {
-    //     //System.Console.WriteLine(i);
-    //     for (int j = 0; j < ColmunDot - 1; j++)
-    //     {
-    //         int valueHolder = rnd.Next(0, 20);
+    //Raylib.DrawGrid(100, 1.0f);
+    for (int i = 0; i < RowDot - 1; i++)
+    {
+        //System.Console.WriteLine(i);
+        for (int j = 0; j < ColmunDot - 1; j++)
+        {
 
 
-    //         Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.DarkGreen);
-    //         Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.Green);
-    //         counter++;
-    //     }
-    // }
-    Raylib.DrawMesh(arazi, loadMaterial, Matrix4x4.Identity);
+            float result = (vectors[i, j].Y - minValHolder) / (maxValHolder + (minValHolder * -1));
+
+            float p = result * 4;
+            int dilim = Math.Min((int)p, 3);
+            float yerel = p - dilim;
+            Color renk = Raylib.ColorLerp(renkler[dilim], renkler[dilim + 1], yerel); Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], renk);
+            Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], renk);
+
+            // if (vectors[i, j].Y > 4)
+            // {
+
+            //     Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.RayWhite);
+            //     Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.White);
+            // }
+            // else if (vectors[i, j].Y >= 2 && vectors[i, j].Y <= 4)
+            // {
+            //     Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], denemColor);
+            //     Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], denemColor);
+            // }
+            // else if (vectors[i, j].Y <= 2 && vectors[i, j].Y > 0)
+            // {
+            //     Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.Brown);
+            //     Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.DarkBrown);
+            // }
+            // else if (vectors[i, j].Y < 0 && vectors[i, j].Y >= -3)
+            // {
+            //     Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.Green);
+            //     Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.DarkGreen);
+            // }
+            // else
+            // {
+            //     Raylib.DrawTriangle3D(vectors[i, j], vectors[i + 1, j], vectors[i, j + 1], Color.DarkBlue);
+            //     Raylib.DrawTriangle3D(vectors[i + 1, j + 1], vectors[i, j + 1], vectors[i + 1, j], Color.Blue);
+            // }
+
+            counter++;
+        }
+    }
+    // Raylib.DrawMesh(arazi, loadMaterial, Matrix4x4.Identity);
 
     Raylib.EndMode3D();
 
